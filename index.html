@@ -755,9 +755,9 @@ for(var i=0;i<r.topics.length;i++){var sp=document.createElement('span');sp.text
 
 function getMon(rid,sn){var r=REGIONS[rid],ib=r.boss.indexOf(sn)>=0;var bh=30+(rid-1)*25+sn*5,ba=5+(rid-1)*3+Math.floor(sn/3);if(ib){var bi=r.boss.indexOf(sn);return{emoji:r.bmon[bi],name:r.bname[bi],hp:Math.round(bh*2.5),mhp:Math.round(bh*2.5),atk:Math.round(ba*1.5),boss:true}}var mi=R(0,r.mon.length-1);return{emoji:r.mon[mi],name:r.mname[mi],hp:bh,mhp:bh,atk:ba,boss:false}}
 
-var BS={mon:null,correct:0,wrong:0,combo:0,maxC:0,dmg:0,timer:null,tLeft:0,tMax:15,rid:0,sn:0,active:false};
+var BS={mon:null,correct:0,wrong:0,combo:0,maxC:0,dmg:0,timer:null,tLeft:0,tMax:11,rid:0,sn:0,active:false};
 
-function startBattle(rid,sn){BS={mon:getMon(rid,sn),correct:0,wrong:0,combo:0,maxC:0,dmg:0,timer:null,tMax:15+(CLS[GS.cls].time||0)+getBonus('time'),rid:rid,sn:sn,active:true};BS.tLeft=BS.tMax;GS.curRegion=rid;GS.curStage=sn;showScreen('battle-screen');document.getElementById('b-avatar').textContent=CLS[GS.cls].emoji;document.getElementById('mon-emoji').textContent=BS.mon.emoji;document.getElementById('mon-name').textContent=BS.mon.name+(BS.mon.boss?' \u{1F451}':'');updBHP();nextQ()}
+function startBattle(rid,sn){BS={mon:getMon(rid,sn),correct:0,wrong:0,combo:0,maxC:0,dmg:0,timer:null,tMax:11+(CLS[GS.cls].time||0)+getBonus('time'),rid:rid,sn:sn,active:true};BS.tLeft=BS.tMax;GS.curRegion=rid;GS.curStage=sn;showScreen('battle-screen');document.getElementById('b-avatar').textContent=CLS[GS.cls].emoji;document.getElementById('mon-emoji').textContent=BS.mon.emoji;document.getElementById('mon-name').textContent=BS.mon.name+(BS.mon.boss?' \u{1F451}':'');updBHP();nextQ()}
 
 function updBHP(){document.getElementById('b-hp').style.width=(GS.hp/GS.mhp*100)+'%';document.getElementById('b-mp').style.width=(GS.mp/GS.mmp*100)+'%';document.getElementById('mon-hp').style.width=Math.max(0,BS.mon.hp/BS.mon.mhp*100)+'%'}
 
@@ -1572,6 +1572,10 @@ var BATTLE3D={
     if(this.player)this.scene.remove(this.player);
     if(this.monster)this.scene.remove(this.monster);
 
+    // 리전 정보 저장 (idle 애니메이션 분기용)
+    this.monsterRegion=regionId||1;
+    this.monsterIsBoss=isBoss||false;
+
     // Create player
     this.player=VOXEL.createCharacter(playerClass||'warrior');
     if(this.player){
@@ -1587,20 +1591,106 @@ var BATTLE3D={
     }
   },
 
+  /* 몬스터 리전 ID 저장 (idle 분기용) */
+  monsterRegion:0,
+  monsterIsBoss:false,
+
   animate:function(){
     var self=this;
     var renderFrame=function(){
       self.animId=requestAnimationFrame(renderFrame);
+      var t=Date.now()*.001;/* 초 단위 시간 */
 
-      // Idle animation
+      /* === 플레이어 idle 애니메이션 === */
       if(self.player&&!self.isAnimating){
-        self.player.position.y=.8+Math.sin(Date.now()*.003)*.05;
-      }
-      if(self.monster&&!self.isAnimating){
-        self.monster.position.y=.8+Math.sin(Date.now()*.003)*.05;
+        /* 부드러운 바운싱 */
+        self.player.position.y=.8+Math.sin(t*2.5)*.06;
+        /* 좌우 살짝 흔들기 */
+        self.player.rotation.y=Math.sin(t*1.5)*.12;
+        /* 팔/무기 파츠 흔들기 (children[3]이상이 팔/무기) */
+        self.player.children.forEach(function(c,i){
+          if(i>=3){/* 팔, 무기 등 */
+            c.rotation.x=Math.sin(t*3+i)*.15;
+            c.rotation.z=Math.sin(t*2.5+i*.5)*.1;
+          }
+        });
+        /* 미세 호흡 (몸통 스케일) */
+        if(self.player.children[1]){
+          self.player.children[1].scale.y=1+Math.sin(t*3)*.03;
+        }
       }
 
-      self.renderer.render(self.scene,self.camera);
+      /* === 몬스터 idle 애니메이션 (리전별 고유) === */
+      if(self.monster&&!self.isAnimating){
+        var rid=self.monsterRegion;
+        if(rid===1){
+          /* 슬라임: 찌그러졌다 늘어나는 젤리 맥동 */
+          var squish=Math.sin(t*4)*.12;
+          self.monster.scale.set(1+squish,1-squish*.7,1+squish);
+          self.monster.position.y=.8+Math.abs(Math.sin(t*3))*.1;
+          self.monster.rotation.y=Math.sin(t*1.2)*.2;
+        }else if(rid===2){
+          /* 물고기: 좌우 유영, 꼬리 흔들기 */
+          self.monster.position.y=.8+Math.sin(t*2)*.08;
+          self.monster.position.x=1.5+Math.sin(t*1.5)*.12;
+          self.monster.rotation.y=Math.sin(t*2)*.25;
+          /* 꼬리 파츠(마지막) 회전 */
+          var tail=self.monster.children[self.monster.children.length-1];
+          if(tail)tail.rotation.y=Math.sin(t*5)*.35;
+        }else if(rid===3){
+          /* 박쥐: 날갯짓 + 상하 비행 */
+          self.monster.position.y=.8+Math.sin(t*3)*.15;
+          self.monster.rotation.z=Math.sin(t*2)*.1;
+          /* 양쪽 날개(children[1],children[2]) 펄럭 */
+          if(self.monster.children[1]){
+            self.monster.children[1].rotation.z=Math.sin(t*8)*.5;
+            self.monster.children[1].position.y=.4+Math.sin(t*8)*.08;
+          }
+          if(self.monster.children[2]){
+            self.monster.children[2].rotation.z=-Math.sin(t*8)*.5;
+            self.monster.children[2].position.y=.4+Math.sin(t*8)*.08;
+          }
+        }else if(rid===4){
+          /* 화염 정령: 소용돌이 회전 + 불꽃 맥동 */
+          self.monster.rotation.y=t*2;
+          self.monster.position.y=.8+Math.sin(t*4)*.1;
+          self.monster.children.forEach(function(c,i){
+            c.scale.set(1+Math.sin(t*5+i*2)*.1,1+Math.sin(t*4+i*1.5)*.08,1+Math.sin(t*5+i*2)*.1);
+            /* 불꽃 발광 맥동 */
+            if(c.material&&c.material.emissive){
+              var glow=Math.sin(t*6+i)*.3+.3;
+              c.material.emissive.setRGB(glow,glow*.3,0);
+            }
+          });
+        }else if(rid===5){
+          /* 전갈: 집게/꼬리 위협 동작 */
+          self.monster.position.y=.8+Math.sin(t*2)*.03;
+          self.monster.rotation.y=Math.sin(t*1)*.15;
+          /* 머리(children[1]) 위아래 */
+          if(self.monster.children[1]){
+            self.monster.children[1].rotation.x=Math.sin(t*3)*.2;
+          }
+          /* 꼬리(children[2]) 위협적 흔들림 */
+          if(self.monster.children[2]){
+            self.monster.children[2].rotation.x=Math.sin(t*4)*.35;
+            self.monster.children[2].rotation.z=Math.sin(t*2.5)*.15;
+          }
+        }else{
+          /* 구름 정령: 떠다니는 유령 느낌 + 투명도 맥동 */
+          self.monster.position.y=.8+Math.sin(t*1.8)*.15;
+          self.monster.position.x=1.5+Math.sin(t*1.2)*.1;
+          self.monster.rotation.y=t*.8;
+          self.monster.children.forEach(function(c,i){
+            c.scale.set(1+Math.sin(t*3+i)*.06,1+Math.sin(t*2.5+i)*.04,1+Math.sin(t*3+i)*.06);
+            if(c.material){
+              c.material.opacity=.7+Math.sin(t*4+i)*.2;
+              c.material.transparent=true;
+            }
+          });
+        }
+      }
+
+      if(self.renderer&&self.scene&&self.camera)self.renderer.render(self.scene,self.camera);
     };
     renderFrame();
   },
