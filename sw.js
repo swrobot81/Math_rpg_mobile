@@ -1,8 +1,8 @@
 /*==========================================
   수학왕국 대모험 - Service Worker
-  오프라인 캐싱 + 앱 업데이트 관리
+  네트워크 우선 + 오프라인 캐시 폴백
 ==========================================*/
-var CACHE_NAME = 'math-rpg-v3.0.0';
+var CACHE_NAME = 'math-rpg-v3.3.0';
 var ASSETS = [
   './',
   './index.html',
@@ -16,7 +16,7 @@ var ASSETS = [
   './icons/icon-512x512.png'
 ];
 
-/* Install: 모든 에셋 캐싱 */
+/* Install: 에셋 캐싱 후 즉시 활성화 */
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
@@ -28,7 +28,7 @@ self.addEventListener('install', function(e) {
   );
 });
 
-/* Activate: 이전 캐시 삭제 */
+/* Activate: 이전 캐시 모두 삭제 + 즉시 제어 */
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(names) {
@@ -46,23 +46,22 @@ self.addEventListener('activate', function(e) {
   );
 });
 
-/* Fetch: 캐시 우선, 네트워크 폴백 */
+/* Fetch: 네트워크 우선, 실패 시 캐시 폴백 */
 self.addEventListener('fetch', function(e) {
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      if (cached) return cached;
-      return fetch(e.request).then(function(response) {
-        /* 유효한 응답만 캐싱 */
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
+    fetch(e.request).then(function(response) {
+      /* 네트워크 성공 → 캐시 갱신 후 반환 */
+      if (response && response.status === 200) {
         var responseClone = response.clone();
         caches.open(CACHE_NAME).then(function(cache) {
           cache.put(e.request, responseClone);
         });
-        return response;
-      }).catch(function() {
-        /* 오프라인 폴백 */
+      }
+      return response;
+    }).catch(function() {
+      /* 네트워크 실패(오프라인) → 캐시에서 반환 */
+      return caches.match(e.request).then(function(cached) {
+        if (cached) return cached;
         if (e.request.destination === 'document') {
           return caches.match('./index.html');
         }

@@ -997,15 +997,15 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('./sw.js').then(function(reg){
       console.log('[PWA] SW registered, scope:',reg.scope);
-      /* 업데이트 감지 */
+      /* 주기적 업데이트 체크 (5분마다) */
+      setInterval(function(){reg.update()},5*60*1000);
+      /* 업데이트 감지 → 자동 새로고침 */
       reg.addEventListener('updatefound',function(){
         var nw=reg.installing;
         nw.addEventListener('statechange',function(){
           if(nw.state==='installed'&&navigator.serviceWorker.controller){
-            /* 새 버전 사용 가능 알림 */
-            if(confirm('새로운 버전이 있습니다! 업데이트하시겠습니까?')){
-              window.location.reload();
-            }
+            console.log('[PWA] 새 버전 감지, 자동 새로고침');
+            window.location.reload();
           }
         });
       });
