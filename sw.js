@@ -2,7 +2,7 @@
   수학왕국 대모험 - Service Worker
   네트워크 우선 + 오프라인 캐시 폴백
 ==========================================*/
-var CACHE_NAME = 'math-rpg-v3.3.0';
+var CACHE_NAME = 'math-rpg-v3.5.0';
 var ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,18 @@ var ASSETS = [
   './icons/icon-144x144.png',
   './icons/icon-192x192.png',
   './icons/icon-384x384.png',
-  './icons/icon-512x512.png'
+  './icons/icon-512x512.png',
+  /* 오디오 에셋 (v3.5) */
+  './audio/correct.mp3',
+  './audio/wrong.mp3',
+  './audio/combo.mp3',
+  './audio/levelup.mp3',
+  './audio/victory.mp3',
+  './audio/defeat.mp3',
+  './audio/click.mp3',
+  './audio/bgm_title.mp3',
+  './audio/bgm_map.mp3',
+  './audio/bgm_battle.mp3'
 ];
 
 /* Install: 에셋 캐싱 후 즉시 활성화 */
