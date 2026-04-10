@@ -699,12 +699,13 @@ var g=document.getElementById('stage-grid');g.innerHTML='';g.className='board-ma
 /* background layers */
 var existBg=body.querySelector('.stage-bg');if(existBg)existBg.remove();
 var bgDiv=document.createElement('div');bgDiv.className='stage-bg';
-bgDiv.innerHTML='<div class="bg-layer" style="background:'+th.bg+'"></div>';
-/* scatter decorations */
+var bgHTML='<div class="bg-layer" style="background:'+th.bg+'"></div>';
+/* scatter decorations (문자열 빌드 후 한번에 할당) */
 for(var di=0;di<18;di++){var dc=th.decos[di%th.decos.length];
 var dx=R(2,92),dy=R(3,95);
 var cls='deco'+(dc.f===1?' float':'')+(dc.f===2?' drift':'');
-bgDiv.innerHTML+='<div class="'+cls+'" style="left:'+dx+'%;top:'+dy+'%;font-size:'+dc.s+'rem;opacity:'+(dc.f?.4:.2)+';animation-delay:'+Math.random()*4+'s">'+dc.e+'</div>'}
+bgHTML+='<div class="'+cls+'" style="left:'+dx+'%;top:'+dy+'%;font-size:'+dc.s+'rem;opacity:'+(dc.f?.4:.2)+';animation-delay:'+Math.random()*4+'s">'+dc.e+'</div>'}
+bgDiv.innerHTML=bgHTML;
 body.insertBefore(bgDiv,body.firstChild);
 /* compute S-curve node positions */
 var W=360,mapH=950,mx=40,pts=[];
@@ -846,7 +847,7 @@ function updCombo(){var e=document.getElementById('b-combo');if(BS.combo>=3){e.t
 function getBonus(t){var v=0;var ks=Object.keys(GS.equip||{});for(var i=0;i<ks.length;i++){for(var j=0;j<SHOP.length;j++){if(SHOP[j].id===GS.equip[ks[i]]&&SHOP[j].fx&&SHOP[j].fx[t])v+=SHOP[j].fx[t]}}return v}
 
 function endBattle(win){BS.active=false;clearInterval(BS.timer);AU.stopBGM();var k=BS.rid+'-'+BS.sn;
-if(win){AU.play('victory');var acc=BS.correct/(BS.correct+BS.wrong);var st=1;if(acc>=.9)st=3;else if(acc>=.7)st=2;var ps=GS.progress[k]?GS.progress[k].stars:0;GS.progress[k]={done:true,stars:Math.max(st,ps)};
+if(win){AU.play('victory');var acc=BS.correct/Math.max(1,BS.correct+BS.wrong);var st=1;if(acc>=.9)st=3;else if(acc>=.7)st=2;var ps=GS.progress[k]?GS.progress[k].stars:0;GS.progress[k]={done:true,stars:Math.max(st,ps)};
 var bg=20+BS.rid*10+BS.sn*3;var gm=1+(CLS[GS.cls].gold||0)+getBonus('gold');var ge=Math.round(bg*gm*(1+BS.maxC*.05));var be=15+BS.rid*8+BS.sn*2+(BS.mon.boss?30:0);var em=1+getBonus('exp');var ee=Math.round(be*em);var gg=BS.mon.boss?R(1,3):(st===3?1:0);
 GS.gold+=ge;GS.gems+=gg;addExp(ee);checkUL();GS.hp=Math.min(GS.mhp,GS.hp+20);GS.mp=Math.min(GS.mmp,GS.mp+10);
 var resData={stars:st,gold:ge,exp:ee,gems:gg,c:BS.correct,w:BS.wrong,mc:BS.maxC,dmg:BS.dmg,acc:Math.round(acc*100)};
@@ -870,8 +871,8 @@ function buyItem(it){if(it.type==='e'&&GS.inv.indexOf(it.id)>=0){if(GS.equip[it.
 
 function mkParticles(sid){var c=document.createElement('div');c.className='particles';document.getElementById(sid).appendChild(c);var cols=['#FFD700','#FF6B35','#2ECC71','#3498DB','#E74C3C','#9B59B6'];for(var i=0;i<30;i++){var p=document.createElement('div');p.className='particle';p.style.left=R(0,100)+'%';p.style.top='-10px';var sz=R(4,10);p.style.width=sz+'px';p.style.height=sz+'px';p.style.background=cols[R(0,5)];p.style.animationDuration=(2+Math.random()*3)+'s';p.style.animationDelay=Math.random()*2+'s';c.appendChild(p)}setTimeout(function(){c.remove()},6000)}
 
-function saveGame(){try{document.cookie='mathRPGm='+encodeURIComponent(JSON.stringify(GS))+';max-age=31536000;path=/'}catch(e){}}
-function loadGame(){try{var cs=document.cookie.split(';');for(var i=0;i<cs.length;i++){var c=cs[i].trim();if(c.indexOf('mathRPGm=')===0){var d=JSON.parse(decodeURIComponent(c.substring(9)));for(var k in d)GS[k]=d[k];AU.init();showScreen('map-screen');renderMap();return}}alert('\uC800\uC7A5\uB41C \uAC8C\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4!')}catch(e){alert('\uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328')}}
+function saveGame(){try{localStorage.setItem('mathRPGm',JSON.stringify(GS))}catch(e){}}
+function loadGame(){try{var d=localStorage.getItem('mathRPGm');if(d){var obj=JSON.parse(d);for(var k in obj)GS[k]=obj[k];AU.init();showScreen('map-screen');renderMap();return}/* 쿠키→localStorage 1회 마이그레이션 */var cs=document.cookie.split(';');for(var i=0;i<cs.length;i++){var c=cs[i].trim();if(c.indexOf('mathRPGm=')===0){var cd=JSON.parse(decodeURIComponent(c.substring(9)));for(var k2 in cd)GS[k2]=cd[k2];document.cookie='mathRPGm=;max-age=0;path=/';saveGame();AU.init();showScreen('map-screen');renderMap();return}}alert('\uC800\uC7A5\uB41C \uAC8C\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4!')}catch(e){alert('\uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328')}}
 
 // Prevent zoom on double tap
 document.addEventListener('touchstart',function(e){if(e.touches.length>1)e.preventDefault()},{passive:false});
@@ -1093,19 +1094,7 @@ document.addEventListener('visibilitychange',function(){
 });
 requestWakeLock();
 
-/* 세이브 데이터를 localStorage로 업그레이드 (쿠키보다 안정적) */
-var origSave=saveGame,origLoad=loadGame;
-saveGame=function(){
-  try{localStorage.setItem('mathRPGm',JSON.stringify(GS))}catch(e){}
-  origSave();
-};
-loadGame=function(){
-  try{
-    var d=localStorage.getItem('mathRPGm');
-    if(d){var obj=JSON.parse(d);for(var k in obj)GS[k]=obj[k];AU.init();showScreen('map-screen');renderMap();return}
-  }catch(e){}
-  origLoad();
-};
+/* [v3.5.1] 세이브는 이제 saveGame()에서 직접 localStorage 사용 (쿠키 이중 저장 제거) */
 
 /* Android 뒤로가기 버튼 처리 */
 var screenHistory=[];
@@ -1132,7 +1121,7 @@ window.addEventListener('popstate',function(e){
 });
 history.pushState(null,null,'');
 
-console.log('[PWA] 수학왕국 대모험 v3.0.0 PWA Ready!');
+console.log('[PWA] 수학왕국 대모험 v3.5.1 PWA Ready!');
 
 /*==========================================
   3D VOXEL SYSTEM - Three.js Integration
@@ -1682,8 +1671,30 @@ var BATTLE3D={
     this.renderer.setSize(w,h);
   },
 
+  _disposeGroup:function(group){
+    if(!group)return;
+    group.traverse(function(obj){
+      if(obj.geometry){obj.geometry.dispose()}
+      if(obj.material){
+        if(Array.isArray(obj.material)){obj.material.forEach(function(m){m.dispose()})}
+        else{obj.material.dispose()}
+      }
+    });
+  },
+
   destroy:function(){
     if(this.animId)cancelAnimationFrame(this.animId);
+    this._disposeGroup(this.player);
+    this._disposeGroup(this.monster);
+    if(this.scene){
+      this.scene.traverse(function(obj){
+        if(obj.geometry)obj.geometry.dispose();
+        if(obj.material){
+          if(Array.isArray(obj.material))obj.material.forEach(function(m){m.dispose()});
+          else obj.material.dispose();
+        }
+      });
+    }
     if(this.renderer){
       this.renderer.dispose();
       var canvas=this.renderer.domElement;
@@ -1730,7 +1741,7 @@ var MAP3D={
     // Renderer
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
     this.renderer.setSize(w,h);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));/* 모바일 성능 제한 */
     var canvas=this.renderer.domElement;
     canvas.className='three-map-canvas';
     container.insertBefore(canvas,container.firstChild);
@@ -1839,6 +1850,15 @@ var MAP3D={
 
   destroy:function(){
     if(this.animId)cancelAnimationFrame(this.animId);
+    if(this.scene){
+      this.scene.traverse(function(obj){
+        if(obj.geometry)obj.geometry.dispose();
+        if(obj.material){
+          if(Array.isArray(obj.material))obj.material.forEach(function(m){m.dispose()});
+          else obj.material.dispose();
+        }
+      });
+    }
     if(this.renderer){
       this.renderer.dispose();
       var canvas=this.renderer.domElement;
@@ -1897,6 +1917,17 @@ renderStages=function(regionId){
   origRenderStages(regionId);
   MAP3D.init();
 };
+
+// Visibility-based pause for 3D rendering (성능 최적화)
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){
+    if(BATTLE3D.animId){cancelAnimationFrame(BATTLE3D.animId);BATTLE3D.animId=null}
+    if(MAP3D.animId){cancelAnimationFrame(MAP3D.animId);MAP3D.animId=null}
+  }else{
+    if(BATTLE3D.renderer&&!BATTLE3D.animId)BATTLE3D.animate();
+    if(MAP3D.renderer&&!MAP3D.animId)MAP3D.animate();
+  }
+});
 
 // Clean up on page unload
 window.addEventListener('beforeunload',function(){

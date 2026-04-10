@@ -2,7 +2,7 @@
   수학왕국 대모험 - Service Worker
   네트워크 우선 + 오프라인 캐시 폴백
 ==========================================*/
-var CACHE_NAME = 'math-rpg-v3.5.0';
+var CACHE_NAME = 'math-rpg-v3.5.1';
 var ASSETS = [
   './',
   './index.html',
